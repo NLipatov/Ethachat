@@ -3,6 +3,7 @@
 @using Limp.Client.Cryptography;
 @using Limp.Client.HubInteraction;
 @using Limp.Client.HubInteraction.EventHandling.ConnectionIdReceive;
+@using Limp.Client.HubInteraction.EventHandling.JWTPairRefresh;
 @using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
 @using Limp.Client.HubInteraction.EventHandling.UsernameResolve;
 @using Limp.Client.Utilities;
@@ -15,6 +16,7 @@
 @inject IOnlineUsersReceiveEventHandler _onlineUsersReceiveEventHandler
 @inject IConnectionIdReceiveEventHandler _сonnectionIdReceiveEventHandler
 @inject IUsernameResolveEventHandler _usernameResolveEventHandler
+@inject IJWTRefreshEventHandler _jWTRefreshEventHandler
 @implements IAsyncDisposable
 
 <PageTitle>Users Online</PageTitle>
@@ -65,8 +67,9 @@
         _onlineUsersReceiveEventHandler.Subscribe(onOnlineUsersReceiveAsync);
         _сonnectionIdReceiveEventHandler.Subscribe(onConnectionIdReceiveAsync);
         _usernameResolveEventHandler.Subscribe(OnUsernameResolvedAsync);
+        _jWTRefreshEventHandler.Subscribe(OnTokensRefreshAsync);
 
-        await _hubInteractor.ConnectToAuthHubAsync(accessToken, refreshToken, OnTokensRefreshAsync);
+        await _hubInteractor.ConnectToAuthHubAsync(accessToken, refreshToken);
 
         await _hubInteractor.ConnectToUsersHubAsync(accessToken);
 

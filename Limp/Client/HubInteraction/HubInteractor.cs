@@ -3,6 +3,7 @@ using ClientServerCommon.Models.Login;
 using ClientServerCommon.Models.Message;
 using Limp.Client.Cryptography.KeyStorage;
 using Limp.Client.HubInteraction.EventHandling.ConnectionIdReceive;
+using Limp.Client.HubInteraction.EventHandling.JWTPairRefresh;
 using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
 using Limp.Client.HubInteraction.EventHandling.UsernameResolve;
 using Limp.Client.TopicStorage;
@@ -19,12 +20,14 @@ namespace Limp.Client.HubInteraction
             (NavigationManager navigationManager,
             IOnlineUsersReceiveEventHandler onlineUsersReceiveEventHandler,
             IConnectionIdReceiveEventHandler connectionIdReceiveEventHandler,
-            IUsernameResolveEventHandler usernameResolveEventHandler)
+            IUsernameResolveEventHandler usernameResolveEventHandler,
+            IJWTRefreshEventHandler jWTRefreshEventHandler)
         {
             _navigationManager = navigationManager;
             _onlineUsersReceiveEventHandler = onlineUsersReceiveEventHandler;
             _connectionIdReceiveEventHandler = connectionIdReceiveEventHandler;
             _usernameResolveEventHandler = usernameResolveEventHandler;
+            _jWTRefreshEventHandler = jWTRefreshEventHandler;
         }
         private HubConnection? authHub;
         private HubConnection? usersHub;
@@ -34,23 +37,17 @@ namespace Limp.Client.HubInteraction
         private readonly IOnlineUsersReceiveEventHandler _onlineUsersReceiveEventHandler;
         private readonly IConnectionIdReceiveEventHandler _connectionIdReceiveEventHandler;
         private readonly IUsernameResolveEventHandler _usernameResolveEventHandler;
+        private readonly IJWTRefreshEventHandler _jWTRefreshEventHandler;
 
         public async Task<HubConnection> ConnectToAuthHubAsync
             (string accessToken,
-            string refreshToken,
-            Func<AuthResult, Task>? onTokensRefresh = null)
+            string refreshToken)
         {
             authHub = new HubConnectionBuilder()
             .WithUrl(_navigationManager.ToAbsoluteUri("/authHub"))
             .Build();
 
-            authHub.On<AuthResult>("OnTokensRefresh", async result =>
-            {
-                if (onTokensRefresh != null)
-                {
-                    await onTokensRefresh(result);
-                }
-            });
+            authHub.On<AuthResult>("OnTokensRefresh", _jWTRefreshEventHandler.CallSubscribers);
 
             await authHub.StartAsync();
 

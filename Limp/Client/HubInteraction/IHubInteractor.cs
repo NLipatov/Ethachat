@@ -7,7 +7,7 @@ namespace Limp.Client.HubInteraction
 {
     public interface IHubInteractor
     {
-        Task<HubConnection> ConnectToAuthHubAsync(string accessToken, string refreshToken, Func<AuthResult, Task>? onTokensRefresh = null);
+        Task<HubConnection> ConnectToAuthHubAsync(string accessToken, string refreshToken);
         Task<HubConnection> ConnectToMessageDispatcherHubAsync(string accessToken, Action<Message>? onMessageReceive = null, Action<string>? onUsernameResolve = null, Action<Guid>? onMessageReceivedByRecepient = null);
         Task<HubConnection> ConnectToUsersHubAsync(string accessToken);
         Task DisposeAsync();

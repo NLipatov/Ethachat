@@ -2,6 +2,7 @@ using Limp.Client;
 using Limp.Client.Cryptography;
 using Limp.Client.HubInteraction;
 using Limp.Client.HubInteraction.EventHandling.ConnectionIdReceive;
+using Limp.Client.HubInteraction.EventHandling.JWTPairRefresh;
 using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
 using Limp.Client.HubInteraction.EventHandling.UsernameResolve;
 using Microsoft.AspNetCore.Components.Web;
@@ -17,5 +18,6 @@ builder.Services.AddSingleton<IHubInteractor, HubInteractor>();
 builder.Services.AddSingleton<IOnlineUsersReceiveEventHandler, OnlineUsersReceiveEventHandler>();
 builder.Services.AddSingleton<IConnectionIdReceiveEventHandler, ConnectionIdReceiveEventHandler>();
 builder.Services.AddSingleton<IUsernameResolveEventHandler, UsernameResolveEventHandler>();
+builder.Services.AddSingleton<IJWTRefreshEventHandler, JWTRefreshEventHandler>();
 
 await builder.Build().RunAsync();
