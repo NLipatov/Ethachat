@@ -9,7 +9,7 @@ namespace Limp.Client.HubInteraction
     {
         Task<HubConnection> ConnectToAuthHubAsync(string accessToken, string refreshToken, Func<AuthResult, Task>? onTokensRefresh = null);
         Task<HubConnection> ConnectToMessageDispatcherHubAsync(string accessToken, Action<Message>? onMessageReceive = null, Action<string>? onUsernameResolve = null, Action<Guid>? onMessageReceivedByRecepient = null);
-        Task<HubConnection> ConnectToUsersHubAsync(string accessToken, Action<string>? onConnectionIdReceive = null, Func<string, Task>? onNameResolve = null);
+        Task<HubConnection> ConnectToUsersHubAsync(string accessToken);
         Task DisposeAsync();
         bool IsMessageHubConnected();
         Task SendMessage(Message message);

@@ -95,7 +95,7 @@
     {
         ThrowErrorIfHubInteractorIsNull();
 
-        usersHub = await _hubInteractor!.ConnectToUsersHubAsync(accessToken, onConnectionIdReceive);
+        usersHub = await _hubInteractor!.ConnectToUsersHubAsync(accessToken);
 
         messageDispatcherHub = await _hubInteractor.ConnectToMessageDispatcherHubAsync(accessToken, OnMessageReceived, OnUsernameResolve, onMessageReceivedByRecepient);
     }

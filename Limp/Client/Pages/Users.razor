@@ -2,7 +2,9 @@
 @using ClientServerCommon.Models;
 @using Limp.Client.Cryptography;
 @using Limp.Client.HubInteraction;
+@using Limp.Client.HubInteraction.EventHandling.ConnectionIdReceive;
 @using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
+@using Limp.Client.HubInteraction.EventHandling.UsernameResolve;
 @using Limp.Client.Utilities;
 @using LimpShared.Authentification;
 @using Microsoft.AspNetCore.SignalR.Client;
@@ -11,6 +13,8 @@
 @inject IJSRuntime jS
 @inject IHubInteractor _hubInteractor
 @inject IOnlineUsersReceiveEventHandler _onlineUsersReceiveEventHandler
+@inject IConnectionIdReceiveEventHandler _сonnectionIdReceiveEventHandler
+@inject IUsernameResolveEventHandler _usernameResolveEventHandler
 @implements IAsyncDisposable
 
 <PageTitle>Users Online</PageTitle>
@@ -42,10 +46,8 @@
         Navigation.NavigateTo($"/user/{username}");
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task CheckIfUserAuthenticated()
     {
-        _onlineUsersReceiveEventHandler.Subscribe(onOnlineUsersReceive);
-
         accessToken = await jS.InvokeAsync<string?>("localStorage.getItem", "access-token");
         refreshToken = await jS.InvokeAsync<string?>("localStorage.getItem", "refresh-token");
 
@@ -54,14 +56,23 @@
             Navigation.NavigateTo("login");
             return;
         }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckIfUserAuthenticated();
+
+        _onlineUsersReceiveEventHandler.Subscribe(onOnlineUsersReceiveAsync);
+        _сonnectionIdReceiveEventHandler.Subscribe(onConnectionIdReceiveAsync);
+        _usernameResolveEventHandler.Subscribe(OnUsernameResolvedAsync);
 
         await _hubInteractor.ConnectToAuthHubAsync(accessToken, refreshToken, OnTokensRefreshAsync);
 
-        await _hubInteractor.ConnectToUsersHubAsync(accessToken, onConnectionIdReceive, OnUsernameResolved);
+        await _hubInteractor.ConnectToUsersHubAsync(accessToken);
 
     }
 
-    private async Task OnUsernameResolved(string username)
+    private async Task OnUsernameResolvedAsync(string username)
     {
         if(_hubInteractor != null)
         {
@@ -82,13 +93,13 @@
         }
     }
 
-    private void onConnectionIdReceive(string connectionId)
+    private async Task onConnectionIdReceiveAsync(string connectionId)
     {
         myConnectionId = connectionId;
         StateHasChanged();
     }
 
-    private async Task onOnlineUsersReceive(List<UserConnections> usersConnectedData)
+    private async Task onOnlineUsersReceiveAsync(List<UserConnections> usersConnectedData)
     {
         userConnections = usersConnectedData;
         StateHasChanged();

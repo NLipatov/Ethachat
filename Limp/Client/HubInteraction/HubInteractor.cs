@@ -2,7 +2,9 @@
 using ClientServerCommon.Models.Login;
 using ClientServerCommon.Models.Message;
 using Limp.Client.Cryptography.KeyStorage;
+using Limp.Client.HubInteraction.EventHandling.ConnectionIdReceive;
 using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
+using Limp.Client.HubInteraction.EventHandling.UsernameResolve;
 using Limp.Client.TopicStorage;
 using Limp.Client.Utilities;
 using LimpShared.Authentification;
@@ -15,10 +17,14 @@ namespace Limp.Client.HubInteraction
     {
         public HubInteractor
             (NavigationManager navigationManager,
-            IOnlineUsersReceiveEventHandler onlineUsersReceiveEventHandler)
+            IOnlineUsersReceiveEventHandler onlineUsersReceiveEventHandler,
+            IConnectionIdReceiveEventHandler connectionIdReceiveEventHandler,
+            IUsernameResolveEventHandler usernameResolveEventHandler)
         {
             _navigationManager = navigationManager;
             _onlineUsersReceiveEventHandler = onlineUsersReceiveEventHandler;
+            _connectionIdReceiveEventHandler = connectionIdReceiveEventHandler;
+            _usernameResolveEventHandler = usernameResolveEventHandler;
         }
         private HubConnection? authHub;
         private HubConnection? usersHub;
@@ -26,6 +32,8 @@ namespace Limp.Client.HubInteraction
         private List<Guid> subscriptions = new();
         private readonly NavigationManager _navigationManager;
         private readonly IOnlineUsersReceiveEventHandler _onlineUsersReceiveEventHandler;
+        private readonly IConnectionIdReceiveEventHandler _connectionIdReceiveEventHandler;
+        private readonly IUsernameResolveEventHandler _usernameResolveEventHandler;
 
         public async Task<HubConnection> ConnectToAuthHubAsync
             (string accessToken,
@@ -104,34 +112,26 @@ namespace Limp.Client.HubInteraction
         }
 
         public async Task<HubConnection> ConnectToUsersHubAsync
-            (string accessToken,
-            Action<string>? onConnectionIdReceive = null,
-            Func<string, Task>? onNameResolve = null)
+            (string accessToken)
         {
             usersHub = new HubConnectionBuilder()
             .WithUrl(_navigationManager.ToAbsoluteUri("/usersHub"))
             .Build();
 
-            usersHub.On<List<UserConnections>>("ReceiveOnlineUsers", updatedTrackedUserConnections =>
+            usersHub.On<List<UserConnections>>("ReceiveOnlineUsers", async updatedTrackedUserConnections =>
             {
-                _onlineUsersReceiveEventHandler.CallSubscribers(updatedTrackedUserConnections);
+                await _onlineUsersReceiveEventHandler.CallSubscribers(updatedTrackedUserConnections);
             });
 
-            usersHub.On<string>("ReceiveConnectionId", conId =>
+            usersHub.On<string>("ReceiveConnectionId", async conId =>
             {
-                if (onConnectionIdReceive != null)
-                {
-                    onConnectionIdReceive(conId);
-                }
+                await _connectionIdReceiveEventHandler.CallSubscribers(conId);
             });
 
             usersHub.On<string>("onNameResolve", async username =>
             {
-                if (onNameResolve != null)
-                {
-                    onNameResolve(username);
-                    await UpdateRSAPublicKeyAsync(username);
-                }
+                await _usernameResolveEventHandler.CallSubscribers(username); 
+                await UpdateRSAPublicKeyAsync(username);
             });
 
             await usersHub.StartAsync();
