@@ -2,12 +2,15 @@
 @using ClientServerCommon.Models;
 @using Limp.Client.Cryptography;
 @using Limp.Client.HubInteraction;
+@using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
 @using Limp.Client.Utilities;
 @using LimpShared.Authentification;
 @using Microsoft.AspNetCore.SignalR.Client;
 @inject NavigationManager Navigation
 @using ClientServerCommon.Models.Login;
 @inject IJSRuntime jS
+@inject IHubInteractor _hubInteractor
+@inject IOnlineUsersReceiveEventHandler _onlineUsersReceiveEventHandler
 @implements IAsyncDisposable
 
 <PageTitle>Users Online</PageTitle>
@@ -33,7 +36,6 @@
     private string myConnectionId { get; set; } = string.Empty;
     private string? accessToken { get; set; }
     private string? refreshToken { get; set; }
-    private HubInteractor? _hubInteractor;
 
     private async Task RedirectToChat(string username)
     {
@@ -42,7 +44,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _hubInteractor = new HubInteractor(Navigation);
+        _onlineUsersReceiveEventHandler.Subscribe(onOnlineUsersReceive);
 
         accessToken = await jS.InvokeAsync<string?>("localStorage.getItem", "access-token");
         refreshToken = await jS.InvokeAsync<string?>("localStorage.getItem", "refresh-token");
@@ -55,7 +57,7 @@
 
         await _hubInteractor.ConnectToAuthHubAsync(accessToken, refreshToken, OnTokensRefreshAsync);
 
-        await _hubInteractor.ConnectToUsersHubAsync(accessToken, onConnectionIdReceive, onOnlineUsersReceive, OnUsernameResolved);
+        await _hubInteractor.ConnectToUsersHubAsync(accessToken, onConnectionIdReceive, OnUsernameResolved);
 
     }
 
@@ -86,7 +88,7 @@
         StateHasChanged();
     }
 
-    private void onOnlineUsersReceive(List<UserConnections> usersConnectedData)
+    private async Task onOnlineUsersReceive(List<UserConnections> usersConnectedData)
     {
         userConnections = usersConnectedData;
         StateHasChanged();

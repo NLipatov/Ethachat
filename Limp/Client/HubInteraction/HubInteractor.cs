@@ -2,6 +2,7 @@
 using ClientServerCommon.Models.Login;
 using ClientServerCommon.Models.Message;
 using Limp.Client.Cryptography.KeyStorage;
+using Limp.Client.HubInteraction.EventHandling.OnlineUsersReceivedEvent;
 using Limp.Client.TopicStorage;
 using Limp.Client.Utilities;
 using LimpShared.Authentification;
@@ -10,21 +11,25 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Limp.Client.HubInteraction
 {
-    public class HubInteractor
+    public class HubInteractor : IHubInteractor
     {
-        public HubInteractor(NavigationManager navigationManager)
+        public HubInteractor
+            (NavigationManager navigationManager,
+            IOnlineUsersReceiveEventHandler onlineUsersReceiveEventHandler)
         {
             _navigationManager = navigationManager;
+            _onlineUsersReceiveEventHandler = onlineUsersReceiveEventHandler;
         }
         private HubConnection? authHub;
         private HubConnection? usersHub;
         private HubConnection? messageDispatcherHub;
         private List<Guid> subscriptions = new();
         private readonly NavigationManager _navigationManager;
+        private readonly IOnlineUsersReceiveEventHandler _onlineUsersReceiveEventHandler;
 
         public async Task<HubConnection> ConnectToAuthHubAsync
-            (string accessToken, 
-            string refreshToken, 
+            (string accessToken,
+            string refreshToken,
             Func<AuthResult, Task>? onTokensRefresh = null)
         {
             authHub = new HubConnectionBuilder()
@@ -48,11 +53,11 @@ namespace Limp.Client.HubInteraction
 
             return authHub;
         }
-        
+
         public async Task<HubConnection> ConnectToMessageDispatcherHubAsync
-            (string accessToken, 
-            Action<Message>? onMessageReceive = null, 
-            Action<string>? onUsernameResolve = null, 
+            (string accessToken,
+            Action<Message>? onMessageReceive = null,
+            Action<string>? onUsernameResolve = null,
             Action<Guid>? onMessageReceivedByRecepient = null)
         {
             if (onMessageReceive != null)
@@ -101,7 +106,6 @@ namespace Limp.Client.HubInteraction
         public async Task<HubConnection> ConnectToUsersHubAsync
             (string accessToken,
             Action<string>? onConnectionIdReceive = null,
-            Action<List<UserConnections>>? onOnlineUsersReceive = null,
             Func<string, Task>? onNameResolve = null)
         {
             usersHub = new HubConnectionBuilder()
@@ -110,10 +114,7 @@ namespace Limp.Client.HubInteraction
 
             usersHub.On<List<UserConnections>>("ReceiveOnlineUsers", updatedTrackedUserConnections =>
             {
-                if (onOnlineUsersReceive != null)
-                {
-                    onOnlineUsersReceive(updatedTrackedUserConnections);
-                }
+                _onlineUsersReceiveEventHandler.CallSubscribers(updatedTrackedUserConnections);
             });
 
             usersHub.On<string>("ReceiveConnectionId", conId =>
