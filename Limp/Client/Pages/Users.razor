@@ -3,9 +3,10 @@
 @using Limp.Client.Cryptography;
 @using Limp.Client.Cryptography.KeyStorage;
 @using Limp.Client.HubInteraction;
-@using Limp.Client.HubInteraction.EventSubscriptionManager;
 @using Limp.Client.HubInteraction.Handlers;
 @using Limp.Client.HubInteraction.Handlers.Helpers;
+@using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.AuthHub;
+@using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.UsersHub;
 @using Limp.Client.TopicStorage;
 @using Limp.Client.Utilities;
 @using LimpShared.Authentification;
@@ -30,7 +31,7 @@
             border: 1px solid;
             height: 5vh;">
             <span>@connection.Username is looking for a chat!</span>
-            <button @onclick="()=>RedirectToChat(connection.Username)">Start a chat</button>
+            <button @onclick="()=> RedirectToChat(connection.Username)">Start a chat</button>
         </div>
     }
 </div>
@@ -38,11 +39,11 @@
 @code {
     private List<UserConnections> userConnections { get; set; } = new();
     private string myConnectionId { get; set; } = string.Empty;
-    private AuthHandler? _authHubHandler;
-    private UsersHandler? _usersHubHandler;
+    private AuthHubHandler? _authHubHandler;
+    private UsersHubHandler? _usersHubHandler;
     private HubInteractor? _hubInteractor;
 
-    private async Task RedirectToChat(string username)
+    private void RedirectToChat(string username)
     {
         _navigationManager.NavigateTo($"/user/{username}");
     }
@@ -50,9 +51,8 @@
     protected override async Task OnInitializedAsync()
     {
         _hubInteractor = new HubInteractor(_navigationManager, _jS, _messageBox);
-
-        _authHubHandler = new AuthHandler(_navigationManager, _jS);
-        _usersHubHandler = new UsersHandler(_navigationManager, _jS, _cryptographyService);
+        _authHubHandler = new AuthHubHandler(_navigationManager, _jS);
+        _usersHubHandler = new UsersHubHandler(_navigationManager, _jS, _cryptographyService);
 
         if (String.IsNullOrWhiteSpace(await JWTHelper.GetAccessToken(_jS)))
         {
@@ -99,8 +99,8 @@
 
     public async ValueTask DisposeAsync()
     {
-        _usersHubHandler?.Dispose();
-        _authHubHandler?.Dispose();
-        await _hubInteractor?.DisposeAsync();
+        _usersHubHandler?.DisposeAsync();
+        _authHubHandler?.DisposeAsync();
+        await _hubInteractor.DisposeAsync();
     }
 }

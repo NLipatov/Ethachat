@@ -1,6 +1,6 @@
 ﻿using ClientServerCommon.Models;
 
-namespace Limp.Client.HubInteraction.EventSubscriptionManager
+namespace Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.UsersHub
 {
     public static class UsersHubSubscriptionManager
     {
@@ -29,7 +29,7 @@ namespace Limp.Client.HubInteraction.EventSubscriptionManager
         }
         public static void CallUsersConnectionsReceived(List<UserConnections> usersConnections)
         {
-            foreach(var method in OnUsersConnectionsReceived) 
+            foreach (var method in OnUsersConnectionsReceived)
             {
                 method(usersConnections);
             }

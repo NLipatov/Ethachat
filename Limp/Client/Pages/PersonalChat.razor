@@ -5,14 +5,15 @@
 @using Limp.Client.Cryptography.CryptoHandlers.Handlers;
 @using Limp.Client.Cryptography.KeyStorage;
 @using Limp.Client.HubInteraction;
-@using Limp.Client.HubInteraction.EventSubscriptionManager;
 @using Limp.Client.HubInteraction.Handlers;
+@using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.UsersHub;
 @using Limp.Client.HubInteraction.Handlers.MessageDecryption;
 @using Limp.Client.TopicStorage;
 @using LimpShared.Encryption;
 @using Microsoft.AspNetCore.SignalR.Client;
 @using Limp.Client.Utilities;
 @using Limp.Client.Pages;
+@using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers;
 @inject NavigationManager Navigation
 @inject IJSRuntime jS;
 @inject ICryptographyService _cryptographyService
@@ -72,7 +73,7 @@
     private List<UserConnections> userConnections { get; set; } = new();
     HubInteractor? _hubInteractor;
     private bool isAcceptedAESKeyExists { get; set; } = false;
-    private UsersHandler? _usersHubHandler;
+    private UsersHubHandler? _usersHubHandler;
 
     protected override async Task OnInitializedAsync()
     {
@@ -196,7 +197,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        _usersHubHandler?.Dispose();
+        _usersHubHandler?.DisposeAsync();
         if(_hubInteractor != null)
         {
             await _hubInteractor.DisposeAsync();

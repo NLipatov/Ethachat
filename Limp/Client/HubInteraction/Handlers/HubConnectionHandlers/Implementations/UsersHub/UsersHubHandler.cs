@@ -1,22 +1,21 @@
 ﻿using ClientServerCommon.Models;
 using Limp.Client.Cryptography;
 using Limp.Client.Cryptography.KeyStorage;
-using Limp.Client.HubInteraction.EventSubscriptionManager;
 using Limp.Client.HubInteraction.Handlers.Helpers;
-using LimpShared.Encryption;
+using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Contract;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 
-namespace Limp.Client.HubInteraction.Handlers;
+namespace Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.UsersHub;
 
-public class UsersHandler : IHandler<UsersHandler>
+public class UsersHubHandler : IHubHandler<UsersHubHandler>
 {
     private readonly NavigationManager _navigationManager;
     private readonly IJSRuntime _jSRuntime;
     private readonly ICryptographyService _cryptographyService;
     private HubConnection? usersHub;
-    public UsersHandler
+    public UsersHubHandler
     (NavigationManager navigationManager,
     IJSRuntime jSRuntime,
     ICryptographyService cryptographyService)
@@ -56,18 +55,18 @@ public class UsersHandler : IHandler<UsersHandler>
         return usersHub;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         UsersHubSubscriptionManager.UnsubscriveAll();
-        DisposeUsersHub();
+        await DisposeHub();
     }
 
-    private async Task DisposeUsersHub()
+    private async Task DisposeHub()
     {
-        if(usersHub != null)
-        {
-            await usersHub.StopAsync();
-            await usersHub.DisposeAsync();
-        }
+        if (usersHub == null)
+            return;
+
+        await usersHub.StopAsync();
+        await usersHub.DisposeAsync();
     }
 }
