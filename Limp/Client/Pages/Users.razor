@@ -6,6 +6,7 @@
 @using Limp.Client.HubInteraction.Handlers;
 @using Limp.Client.HubInteraction.Handlers.Helpers;
 @using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.AuthHub;
+@using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.MessageDispatcherHub;
 @using Limp.Client.HubInteraction.Handlers.HubConnectionHandlers.Implementations.UsersHub;
 @using Limp.Client.TopicStorage;
 @using Limp.Client.Utilities;
@@ -15,7 +16,7 @@
 @inject ICryptographyService _cryptographyService
 @inject IMessageBox _messageBox
 @using ClientServerCommon.Models.Login;
-@inject IJSRuntime _jS
+@inject IJSRuntime _jSRuntime
 @implements IAsyncDisposable
 
 <PageTitle>Users Online</PageTitle>
@@ -41,6 +42,7 @@
     private string myConnectionId { get; set; } = string.Empty;
     private AuthHubHandler? _authHubHandler;
     private UsersHubHandler? _usersHubHandler;
+    private MessageDispatcherHandler? _messageDispatcherHandler;
     private HubInteractor? _hubInteractor;
 
     private void RedirectToChat(string username)
@@ -50,11 +52,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _hubInteractor = new HubInteractor(_navigationManager, _jS, _messageBox);
-        _authHubHandler = new AuthHubHandler(_navigationManager, _jS);
-        _usersHubHandler = new UsersHubHandler(_navigationManager, _jS, _cryptographyService);
+        _hubInteractor = new HubInteractor(_navigationManager, _jSRuntime, _messageBox);
+        _authHubHandler = new AuthHubHandler(_navigationManager, _jSRuntime);
+        _usersHubHandler = new UsersHubHandler(_navigationManager, _jSRuntime, _cryptographyService);
 
-        if (String.IsNullOrWhiteSpace(await JWTHelper.GetAccessToken(_jS)))
+        if (String.IsNullOrWhiteSpace(await JWTHelper.GetAccessToken(_jSRuntime)))
         {
             _navigationManager.NavigateTo("login");
             return;
@@ -68,8 +70,8 @@
 
             if (result.Result == AuthResultType.Success)
             {
-                await _jS.InvokeVoidAsync("localStorage.setItem", "access-token", pair!.AccessToken);
-                await _jS.InvokeVoidAsync("localStorage.setItem", "refresh-token", pair!.RefreshToken.Token);
+                await _jSRuntime.InvokeVoidAsync("localStorage.setItem", "access-token", pair!.AccessToken);
+                await _jSRuntime.InvokeVoidAsync("localStorage.setItem", "refresh-token", pair!.RefreshToken.Token);
             }
         });
 
@@ -89,7 +91,8 @@
         {
             if (_hubInteractor != null)
             {
-                await _hubInteractor.ConnectToMessageDispatcherHubAsync(cryptographyService: _cryptographyService);
+                //await _hubInteractor.ConnectToMessageDispatcherHubAsync(cryptographyService: _cryptographyService);
+                _messageDispatcherHandler = new MessageDispatcherHandler(_navigationManager, _jSRuntime);
             }
         });
 
