@@ -44,15 +44,14 @@ namespace Limp.Server.Hubs
 
         public async override Task OnDisconnectedAsync(Exception? exception)
         {
-            var user = InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x=>x.ConnectionIds.Contains(Context.ConnectionId));
-            user?.ConnectionIds.Remove(Context.ConnectionId);
+            var user = InMemoryHubConnectionStorage
+                .ConnectedUsers
+                .FirstOrDefault(x=>x.ConnectionIds.Contains(Context.ConnectionId))
+                ?.ConnectionIds.Remove(Context.ConnectionId);
 
             lock (this)
             {
-                if (user?.ConnectionIds.Count == 0)
-                {
-                    InMemoryHubConnectionStorage.ConnectedUsers.Remove(user);
-                }
+                InMemoryHubConnectionStorage.ConnectedUsers.RemoveAll(x => x.ConnectionIds.Count == 0);
             }
 
             await PushOnlineUsersToClients();
