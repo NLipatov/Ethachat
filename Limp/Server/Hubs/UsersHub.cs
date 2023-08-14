@@ -63,17 +63,22 @@ namespace Limp.Server.Hubs
 
             var user = InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x => x.ConnectionIds.Contains(Context.ConnectionId));
             if (user is not null)
-                InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x => x.ConnectionIds.Contains(Context.ConnectionId))!.Username = tokenUsername;
-            else
             {
                 lock (this)
                 {
-                    InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
-                    {
-                        Username = tokenUsername,
-                        ConnectionIds = new() { Context.ConnectionId }
-                    });
+                    InMemoryHubConnectionStorage.ConnectedUsers.Remove(user);
                 }
+
+                await PushOnlineUsersToClients();
+            }
+
+            lock (this)
+            {
+                InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
+                {
+                    Username = tokenUsername,
+                    ConnectionIds = new() { Context.ConnectionId }
+                });
             }
 
             await PushOnlineUsersToClients();
