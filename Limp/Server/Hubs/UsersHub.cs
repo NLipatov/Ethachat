@@ -64,7 +64,7 @@ namespace Limp.Server.Hubs
 
             var user = InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x => x.ConnectionIds.Contains(Context.ConnectionId));
             if (user is not null)
-                user.Username = tokenUsername;
+                InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x => x.ConnectionIds.Contains(Context.ConnectionId))!.Username = tokenUsername;
             else
             {
                 lock (this)
