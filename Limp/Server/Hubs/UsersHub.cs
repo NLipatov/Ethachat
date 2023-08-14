@@ -1,6 +1,7 @@
 ﻿using ClientServerCommon.Models;
 using Limp.Client.HubInteraction.Handlers.Helpers;
 using Limp.Client.Services.JWTReader;
+using Limp.Server.Hubs.Models;
 using Limp.Server.Hubs.UsersConnectedManaging.ConnectedUserStorage;
 using Limp.Server.Hubs.UsersConnectedManaging.EventHandling;
 using Limp.Server.Hubs.UsersConnectedManaging.EventHandling.OnlineUsersRequestEvent;
@@ -11,43 +12,70 @@ using LimpShared.Models.ConnectedUsersManaging;
 using LimpShared.Models.Users;
 using LimpShared.Models.WebPushNotification;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Concurrent;
 
 namespace Limp.Server.Hubs
 {
     public class UsersHub : Hub
     {
         private readonly IServerHttpClient _serverHttpClient;
-        private readonly IUserConnectedHandler<UsersHub> _userConnectedHandler;
-        private readonly IOnlineUsersManager _onlineUsersManager;
 
         public UsersHub
-        (IServerHttpClient serverHttpClient,
-        IUserConnectedHandler<UsersHub> userConnectedHandler,
-        IOnlineUsersManager onlineUsersManager)
+        (IServerHttpClient serverHttpClient)
         {
             _serverHttpClient = serverHttpClient;
-            _userConnectedHandler = userConnectedHandler;
-            _onlineUsersManager = onlineUsersManager;
         }
+
         public async override Task OnConnectedAsync()
         {
-            _userConnectedHandler.OnConnect(Context.ConnectionId);
+            lock(this)
+            {
+                InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
+                {
+                    ConnectionIds = new List<string>
+                {
+                    Context.ConnectionId
+                }
+                });
+            }
+
             await PushOnlineUsersToClients();
         }
 
         public async override Task OnDisconnectedAsync(Exception? exception)
         {
-            _userConnectedHandler.OnDisconnect(Context.ConnectionId);
+            var user = InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x=>x.ConnectionIds.Contains(Context.ConnectionId));
+            user?.ConnectionIds.Remove(Context.ConnectionId);
+
+            lock (this)
+            {
+                if (user?.ConnectionIds.Count == 0)
+                {
+                    InMemoryHubConnectionStorage.ConnectedUsers.Remove(user);
+                }
+            }
+
             await PushOnlineUsersToClients();
         }
 
         public async Task SetUsername(string accessToken)
         {
-            await _userConnectedHandler
-            .OnUsernameResolved
-            (Context.ConnectionId,
-            accessToken,
-            CallUserHubMethodsOnUsernameResolved: OnUsernameResolvedHandlers);
+            string tokenUsername = TokenReader.GetUsernameFromAccessToken(accessToken);
+
+            var user = InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x => x.ConnectionIds.Contains(Context.ConnectionId));
+            if (user is not null)
+                user.Username = tokenUsername;
+            else
+            {
+                lock (this)
+                {
+                    InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
+                    {
+                        Username = tokenUsername,
+                        ConnectionIds = new() { Context.ConnectionId }
+                    });
+                }
+            }
 
             await PushOnlineUsersToClients();
         }
@@ -87,7 +115,11 @@ namespace Limp.Server.Hubs
         public async Task PushOnlineUsersToClients()
         {
             //Defines a set of clients that are connected to both UsersHub and MessageDispatcherHub at the same time
-            UserConnectionsReport userConnections = _onlineUsersManager.FormUsersOnlineMessage();
+            UserConnectionsReport userConnections = new UserConnectionsReport
+            {
+                FormedAt = DateTime.Now,
+                UserConnections = InMemoryHubConnectionStorage.ConnectedUsers.Select(x => new UserConnection { Username = x.Username, ConnectionIds = x.ConnectionIds }).ToArray()
+            };//_onlineUsersManager.FormUsersOnlineMessage();
             //Pushes set of clients to all the clients
             await Clients.All.SendAsync("ReceiveOnlineUsers", userConnections);
         }
