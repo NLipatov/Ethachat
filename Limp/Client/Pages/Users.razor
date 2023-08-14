@@ -92,11 +92,8 @@
     private void UpdateUsersList(UserConnectionsReport usersOnlineMessage)
     {
         Console.WriteLine("Updating users list");
-        if (_usersOnlineMessage == null || _usersOnlineMessage.FormedAt < usersOnlineMessage.FormedAt)
-        {
-            Console.WriteLine($"Users: {string.Join(", ", usersOnlineMessage.UserConnections.Select(x => x.Username))}");
-            _usersOnlineMessage = usersOnlineMessage;
-            StateHasChanged();
-        }
+        Console.WriteLine($"Users: {string.Join(", ", usersOnlineMessage.UserConnections.Select(x => x.Username))}");
+        _usersOnlineMessage = usersOnlineMessage;
+        StateHasChanged();
     }
 }
