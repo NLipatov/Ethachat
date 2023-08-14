@@ -28,16 +28,13 @@ namespace Limp.Server.Hubs
 
         public async override Task OnConnectedAsync()
         {
-            lock(this)
+            InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
             {
-                InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
-                {
-                    ConnectionIds = new List<string>
+                ConnectionIds = new List<string>
                 {
                     Context.ConnectionId
                 }
-                });
-            }
+            });
 
             await PushOnlineUsersToClients();
         }
@@ -49,10 +46,7 @@ namespace Limp.Server.Hubs
                 .FirstOrDefault(x=>x.ConnectionIds.Contains(Context.ConnectionId))
                 ?.ConnectionIds.Remove(Context.ConnectionId);
 
-            lock (this)
-            {
-                InMemoryHubConnectionStorage.ConnectedUsers.RemoveAll(x => x.ConnectionIds.Count == 0);
-            }
+            InMemoryHubConnectionStorage.ConnectedUsers.RemoveAll(x => x.ConnectionIds.Count == 0);
 
             await PushOnlineUsersToClients();
         }
@@ -64,15 +58,9 @@ namespace Limp.Server.Hubs
             var user = InMemoryHubConnectionStorage.ConnectedUsers.FirstOrDefault(x => x.ConnectionIds.Contains(Context.ConnectionId));
             if (user is not null)
             {
-                lock (this)
-                {
-                    InMemoryHubConnectionStorage.ConnectedUsers.Remove(user);
-                }
-
-                await PushOnlineUsersToClients();
+                user.Username = tokenUsername;
             }
-
-            lock (this)
+            else
             {
                 InMemoryHubConnectionStorage.ConnectedUsers.Add(new UserHubUser
                 {
