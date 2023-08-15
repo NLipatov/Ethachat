@@ -89,12 +89,14 @@
         return myUsername;
     }
 
-    private void UpdateUsersList(UserConnectionsReport usersOnlineMessage)
+    private async Task UpdateUsersList(UserConnectionsReport usersOnlineMessage)
     {
         if (_usersOnlineMessage == null || _usersOnlineMessage.FormedAt < usersOnlineMessage.FormedAt)
         {
             _usersOnlineMessage = usersOnlineMessage;
             StateHasChanged();
         }
+
+        await _usersService.ActualizeConnectedUsersAsync();
     }
 }
